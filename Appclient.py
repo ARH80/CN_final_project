@@ -8,6 +8,8 @@ def parse_input_argument():
     parser.add_argument('-s', '--server', required=True,
                     help="The IP address and (TCP) port number of the tunnel server.\
                                The format is 'server ip:server port'.")
+    args = parser.parse_args()
+    return args
 
 args = parse_input_argument()
     
