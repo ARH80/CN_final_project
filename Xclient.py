@@ -7,6 +7,7 @@ import sys
 import argparse
 import time
 import json
+import threading
 
 lock = mp.Lock()
 client_app = {}
@@ -49,32 +50,34 @@ def handle_tcp_conn_send(stcp_socket, rmt_udp_addr, udp_to_tcp_queue):
         lock.acquire()
         if udp_to_tcp_queue.qsize() > 0:
             res = udp_to_tcp_queue.get()
-            lock.release()
             res_json = {
-                "data": res,
+                "data": res.decode(),
                 "rmt": rmt_udp_addr
             }
             res = json.dumps(res_json)
+            print(res_json)
             stcp_socket.send(res.encode())
+        time.sleep(1)
+        lock.release()
             
 def handle_udp_conn_recv(udp_socket, rmt_udp_addr):
     if not udp_socket.getsockname()[1] in client_app.keys():
         q = Queue()
-        mp.Process(target=handle_tcp_conn_send,
+        threading.Thread(target=handle_tcp_conn_send,
                     args=(sock, rmt_udp_addr, q)).start()
 
-        mp.Process(target=handle_tcp_conn_recv,
+        threading.Thread(target=handle_tcp_conn_recv,
                     args=(sock, udp_socket)).start()
 
-        udp_socket.listen()
-        conn, _ = udp_socket.accept()
         client_app[udp_socket.getsockname()[1]] = q
         
     q = client_app[udp_socket.getsockname()[1]]
     while True:
-        res = conn.recv(1024)
-        print(res.decode())
-        q.put(res)
+        msg, addr = udp_socket.recvfrom(1024)
+        print(f'udp msg received: {msg}')
+        # lock.acquire()
+        q.put(msg)
+        # lock.release()
 
 if __name__ == "__main__":
     args = parse_input_argument()

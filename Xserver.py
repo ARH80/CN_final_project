@@ -37,6 +37,7 @@ if __name__ == "__main__":
     try:
         while True:
             res = conn.recv(1024)
+            print(f'msg received: {res.decode()}')
             res = json.loads(res.decode())
             rmt = res['rmt']
             data = res['data']

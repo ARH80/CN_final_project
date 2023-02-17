@@ -13,17 +13,16 @@ def parse_input_argument():
 
 args = parse_input_argument()
     
-tcp_server_ip = args.server.split(':')[0]
-tcp_server_port = int(args.server.split(':')[1])
+udpserver_ip = args.server.split(':')[0]
+udpserver_port = int(args.server.split(':')[1])
 
 sock = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
-sock.connect((tcp_server_ip, tcp_server_port))
 
 count = 0
 while True:
     count += 1
-    sock.send(f"sending app client port {tcp_server_port} {count}".encode())
-    print(f"sending test port {tcp_server_port} {count}".encode())
+    sock.sendto(f"sending app client port {udpserver_port} {count}".encode(), (udpserver_ip, udpserver_port))
+    print(f"sending test port {udpserver_port} {count}".encode())
     res = sock.recv(1024)
     print(f"recieving app client port {res.decode}".encode())
     
