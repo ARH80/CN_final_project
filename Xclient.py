@@ -40,10 +40,10 @@ def read_n_byte_from_tcp_sock(sock, n):
         pos += cr
     return buff
 
-def handle_tcp_conn_recv(stcp_socket, udp_socket, incom_udp_addr=None):
+def handle_tcp_conn_recv(stcp_socket, udp_socket, incom_udp_addr):
     while True:
         res = stcp_socket.recv(1024)
-        udp_socket.send(res)
+        udp_socket.sendto(res, incom_udp_addr)
 
 def handle_tcp_conn_send(stcp_socket, rmt_udp_addr, udp_to_tcp_queue):
     while True:
@@ -57,7 +57,7 @@ def handle_tcp_conn_send(stcp_socket, rmt_udp_addr, udp_to_tcp_queue):
             res = json.dumps(res_json)
             print(res_json)
             stcp_socket.send(res.encode())
-        time.sleep(1)
+        time.sleep(5)
         lock.release()
             
 def handle_udp_conn_recv(udp_socket, rmt_udp_addr):
@@ -67,7 +67,7 @@ def handle_udp_conn_recv(udp_socket, rmt_udp_addr):
                     args=(sock, rmt_udp_addr, q)).start()
 
         threading.Thread(target=handle_tcp_conn_recv,
-                    args=(sock, udp_socket)).start()
+                    args=(sock, udp_socket, rmt_udp_addr)).start()
 
         client_app[udp_socket.getsockname()[1]] = q
         

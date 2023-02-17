@@ -4,6 +4,7 @@ import logging
 import sys
 import argparse
 import json
+import threading
 
 server_app = {}
 lock = mp.Lock()
@@ -20,10 +21,12 @@ def parse_input_argument():
     args = parser.parse_args()
     return args
 
-def handle_tcp_conn_send(udp_socket):
+def handle_tcp_conn_send(tcp_conn, udp_socket):
+    print('hi')
     while True:
-        res = udp_socket.recv(1024)
-        sock.send(res)
+        msg, addr = udp_socket.recvfrom(1024)
+        print(msg.decode())
+        tcp_conn.send(msg)
 
 if __name__ == "__main__":
     args = parse_input_argument()
@@ -37,21 +40,20 @@ if __name__ == "__main__":
     try:
         while True:
             res = conn.recv(1024)
-            print(f'msg received: {res.decode()}')
+            print(f'msg received: {res}')
             res = json.loads(res.decode())
             rmt = res['rmt']
             data = res['data']
             if not rmt[1] in server_app.keys():
                 try:
                     udp_socket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
-                    udp_socket.connect(rmt)
-                    mp.Process(target=handle_tcp_conn_send,
-                                args=(udp_socket)).start()
+                    threading.Thread(target=handle_tcp_conn_send,
+                                args=(conn, udp_socket)).start()
                 except socket.error as e:
                     logging.error("(Error) Error openning the UDP socket: {}".format(e))
                     logging.error("(Error) Cannot open the UDP socket {}:{} or bind to it".format(rmt))
                     sys.exit(1)
                 server_app[rmt[1]] = udp_socket
-            server_app[rmt[1]].send(data.encode())
+            server_app[rmt[1]].sendto(data.encode(), (rmt[0], rmt[1]))
     except KeyboardInterrupt:
         logging.info("Closing the TCP connection...")
