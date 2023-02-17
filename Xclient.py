@@ -12,6 +12,7 @@ import threading
 lock = mp.Lock()
 client_app = {}
 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+address_table = {}
 
 def parse_input_argument():
     parser = argparse.ArgumentParser(description='This is a client program that create a tunnel\
@@ -43,7 +44,7 @@ def read_n_byte_from_tcp_sock(sock, n):
 def handle_tcp_conn_recv(stcp_socket, udp_socket, incom_udp_addr):
     while True:
         res = stcp_socket.recv(1024)
-        udp_socket.sendto(res, incom_udp_addr)
+        udp_socket.sendto(res, address_table[incom_udp_addr])
 
 def handle_tcp_conn_send(stcp_socket, rmt_udp_addr, udp_to_tcp_queue):
     while True:
@@ -60,21 +61,22 @@ def handle_tcp_conn_send(stcp_socket, rmt_udp_addr, udp_to_tcp_queue):
         time.sleep(5)
         lock.release()
             
-def handle_udp_conn_recv(udp_socket, rmt_udp_addr):
+def handle_udp_conn_recv(udp_socket, rmt_udp_addr, incom_udp_addr):
     if not udp_socket.getsockname()[1] in client_app.keys():
         q = Queue()
         threading.Thread(target=handle_tcp_conn_send,
                     args=(sock, rmt_udp_addr, q)).start()
 
         threading.Thread(target=handle_tcp_conn_recv,
-                    args=(sock, udp_socket, rmt_udp_addr)).start()
+                    args=(sock, udp_socket, incom_udp_addr)).start()
 
         client_app[udp_socket.getsockname()[1]] = q
         
     q = client_app[udp_socket.getsockname()[1]]
     while True:
         msg, addr = udp_socket.recvfrom(1024)
-        print(f'udp msg received: {msg}')
+        address_table[incom_udp_addr] = addr
+        print(f'udp msg received: {msg} from {addr}')
         # lock.acquire()
         q.put(msg)
         # lock.release()
@@ -105,7 +107,7 @@ if __name__ == "__main__":
             logging.info("Bind to the UDP socket {}:{}".format(udp_listening_ip, udp_listening_port))
     
         mp.Process(target=handle_udp_conn_recv,
-                   args=(udp_socket, rmt_udp_addr)).start()
+                   args=(udp_socket, rmt_udp_addr, (udp_listening_ip, udp_listening_port))).start()
 
     try:
         while True:
