@@ -102,7 +102,7 @@ if __name__ == "__main__":
             logging.info("Bind to the UDP socket {}:{}".format(udp_listening_ip, udp_listening_port))
     
         mp.Process(target=handle_udp_conn_recv,
-                   args=(udp_socket, tcp_server_addr, rmt_udp_addr)).start()
+                   args=(udp_socket, rmt_udp_addr)).start()
 
     try:
         while True:
